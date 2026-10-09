@@ -11,32 +11,30 @@ test("TC-01 - Verify train search with valid source, destination and journey dat
     timeout: 60000,
   });
 
-  // Handle the login popup in every browser.
+  // Close the login popup.
   const loginPopup = new LoginPopup(page);
   await loginPopup.closeIfVisible();
 
-  // Verify the journey fields.
+  // Verify source and destination.
   const sourceField = page.locator("#fromCity");
   const destinationField = page.locator("#toCity");
-
-  await expect(sourceField).toBeVisible();
-  await expect(destinationField).toBeVisible();
 
   await expect(sourceField).toHaveValue(/New Delhi/i);
   await expect(destinationField).toHaveValue(/Kanpur/i);
 
   // Submit the train search.
-  const searchButton = page.getByText("Search", { exact: true });
+  const searchButton = page.getByText(/^search$/i);
   await expect(searchButton).toBeVisible();
   await searchButton.click();
 
-  // Allow the results page to update.
-  await expect(page).toHaveURL(/makemytrip\.com/i, {
+  // Verify that at least one train result card appears.
+  const trainResults = page.locator('[data-testid="listing-card"]');
+
+  await expect(trainResults.first()).toBeVisible({
     timeout: 60000,
   });
 
-  await page.screenshot({
-    path: "test-results/TC-01-after-search.png",
-    fullPage: false,
-  });
+  await expect(trainResults).not.toHaveCount(0);
+
+  console.log("Train results displayed:", await trainResults.count());
 });
