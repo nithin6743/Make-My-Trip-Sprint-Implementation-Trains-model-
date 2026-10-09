@@ -27,7 +27,7 @@ test("TC-01 - Verify train search with valid source, destination and journey dat
   await expect(searchButton).toBeVisible();
   await searchButton.click();
 
-  // Verify that train results appear.
+  // Verify that at least one train result card appears.
   const trainResults = page.locator('[data-testid="listing-card"]');
 
   await expect(trainResults.first()).toBeVisible({
