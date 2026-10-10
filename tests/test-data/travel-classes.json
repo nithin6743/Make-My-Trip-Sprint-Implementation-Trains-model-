@@ -1,0 +1,12 @@
+[
+  { "code": "ALL", "name": "All Class" },
+  { "code": "SL", "name": "Sleeper Class" },
+  { "code": "3A", "name": "Third AC" },
+  { "code": "2A", "name": "Second AC" },
+  { "code": "1A", "name": "First AC" },
+  { "code": "2S", "name": "Second Seating" },
+  { "code": "EV", "name": "Vistadome AC" },
+  { "code": "CC", "name": "AC Chair Car" },
+  { "code": "FC", "name": "First Class" },
+  { "code": "3E", "name": "Third AC Economy" }
+]
