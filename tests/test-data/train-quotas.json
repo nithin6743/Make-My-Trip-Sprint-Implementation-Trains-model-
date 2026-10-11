@@ -1,0 +1,14 @@
+[
+  {
+    "id": "filter-gn",
+    "name": "General Quota"
+  },
+  {
+    "id": "filter-ld",
+    "name": "Ladies Quota"
+  },
+  {
+    "id": "filter-tq",
+    "name": "Tatkal"
+  }
+]
