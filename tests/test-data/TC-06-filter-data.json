@@ -1,0 +1,45 @@
+{
+  "testCases": [
+    {
+      "id": "TC-06A",
+      "title": "Verify trains departing after 6 PM",
+      "filterName": "Departure after 6 PM",
+      "filterTestId": "filter-departure_6pm_12am",
+      "validationType": "departureAfter",
+      "cutoffHour": 18,
+      "cutoffMinute": 0,
+      "numberOfCardsToValidate": 20,
+      "enabled": true
+    },
+    {
+      "id": "TC-06B",
+      "title": "Verify trains arriving before 12 PM",
+      "filterName": "Arrival before 12 PM",
+      "filterTestId": "filter-arrival_before_12pm",
+      "validationType": "arrivalBefore",
+      "cutoffHour": 12,
+      "cutoffMinute": 0,
+      "numberOfCardsToValidate": 20,
+      "enabled": true
+    },
+    {
+      "id": "TC-06C",
+      "title": "Verify trains with availability",
+      "filterName": "Available",
+      "filterTestId": "filter-available",
+      "validationType": "availability",
+      "numberOfCardsToValidate": 20,
+      "enabled": true
+    },
+    {
+      "id": "TC-06D",
+      "title": "Verify trains in Journey Class 3A",
+      "filterName": "Journey Class 3A",
+      "filterTestId": "filter-3a",
+      "validationType": "journeyClass",
+      "expectedClass": "3A",
+      "numberOfCardsToValidate": 20,
+      "enabled": true
+    }
+  ]
+}
