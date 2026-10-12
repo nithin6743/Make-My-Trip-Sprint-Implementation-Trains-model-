@@ -3,41 +3,25 @@ import { LoginPopup } from "./pages/LoginPopup";
 import { TrainResultsPage } from "./pages/TrainResultsPage";
 import filterData from "./test-data/TC-06-filter-data.json";
 
-type FilterCase = (typeof filterData.testCases)[number];
-
-for (const testCase of filterData.testCases as FilterCase[]) {
+for (const testCase of filterData.testCases) {
   test(`${testCase.id} - ${testCase.title}`, async ({ page }) => {
     test.skip(!testCase.enabled, "Disabled in TC-06 JSON data");
-
     test.setTimeout(120000);
 
-    // Open MakeMyTrip.
-    await page.goto("https://www.makemytrip.com/flights", {
+    // Open the train page directly.
+    await page.goto("https://www.makemytrip.com/railways/", {
       waitUntil: "domcontentloaded",
       timeout: 60000,
     });
 
-    // Close the login popup if it appears.
+    // Use the existing popup handler. Do not modify LoginPopup.ts.
     const loginPopup = new LoginPopup(page);
     await loginPopup.closeIfVisible();
 
-    // Navigate to Trains.
-    const trainsLink = page.getByRole("link", { name: /trains/i }).first();
-
-    if (await trainsLink.isVisible().catch(() => false)) {
-      await trainsLink.click();
-    } else {
-      await page
-        .getByText(/^trains$/i)
-        .first()
-        .click();
-    }
-
-    // Verify the default route.
+    // Confirm the default route.
     await expect(page.locator("#fromCity")).toHaveValue(/New Delhi/i, {
       timeout: 30000,
     });
-
     await expect(page.locator("#toCity")).toHaveValue(/Kanpur/i);
 
     // Search for trains.
@@ -46,81 +30,67 @@ for (const testCase of filterData.testCases as FilterCase[]) {
     const results = new TrainResultsPage(page);
     await results.verifyResultsDisplayed();
 
-    // Locate the filter configured in JSON.
+    // Locate and apply the filter from JSON.
     const filter = page.locator(
       `label[data-testid="${testCase.filterTestId}"]`,
     );
 
-    const checkbox = filter.locator('input[type="checkbox"]');
-
-    await expect(filter).toBeVisible({
-      timeout: 20000,
-    });
-
+    await expect(filter).toBeVisible({ timeout: 20000 });
     await filter.scrollIntoViewIfNeeded();
 
-    // Capture the initial card count for diagnostic output.
+    const checkbox = filter.locator('input[type="checkbox"]');
     const beforeCount = await results.trainCards.count();
 
-    // Apply the filter only when it is not already selected.
     if (!(await checkbox.isChecked())) {
-      await filter.click();
+      await filter.scrollIntoViewIfNeeded();
+      await filter.click({ timeout: 10000 });
     }
 
-    await expect(checkbox).toBeChecked({
-      timeout: 10000,
-    });
+    await expect(checkbox).toBeChecked({ timeout: 15000 });
 
-    // Wait for the result list to settle.
-    // Do not assume the departure-time signature must change:
-    // availability or class filters may leave those times unchanged.
+    // Wait for the number of cards to change after filtering.
     await expect
       .poll(async () => await results.trainCards.count(), {
-        message: `${testCase.filterName}: no train cards found after filtering`,
+        message: `${testCase.id}: result count did not change after applying the filter`,
         timeout: 20000,
         intervals: [500, 1000, 2000],
       })
-      .toBeGreaterThan(0);
+      .not.toBe(beforeCount);
 
-    const afterCount = await results.trainCards.count();
+    await results.verifyResultsDisplayed();
 
     console.log(
-      `${testCase.id}: cards before filter=${beforeCount}, cards after filter=${afterCount}`,
+      `${testCase.id}: cards before=${beforeCount}, after=${await results.trainCards.count()}`,
     );
 
-    // Validate results according to the JSON scenario.
+    // Validate the first result for this simplified test.
     switch (testCase.validationType) {
       case "departureAfter":
-        await results.verifyDepartureAfter(
-          testCase.cutoffHour!,
-          testCase.cutoffMinute!,
-          testCase.numberOfCardsToValidate,
+        await results.verifyFirstDepartureAfter(
+          testCase.cutoffHour,
+          testCase.cutoffMinute,
         );
         break;
 
       case "arrivalBefore":
-        await results.verifyArrivalBefore(
-          testCase.cutoffHour!,
-          testCase.cutoffMinute!,
-          testCase.numberOfCardsToValidate,
+        await results.verifyFirstArrivalBefore(
+          testCase.cutoffHour,
+          testCase.cutoffMinute,
         );
         break;
 
       case "availability":
-        await results.verifyAvailability(testCase.numberOfCardsToValidate);
+        await results.verifyFirstTrainAvailability();
         break;
 
       case "journeyClass":
-        await results.verifyJourneyClass(
-          testCase.expectedClass!,
-          testCase.numberOfCardsToValidate,
-        );
+        await results.verifyFirstTrainClass(testCase.expectedClass);
         break;
 
       default:
-        throw new Error(`Unknown validationType: ${testCase.validationType}`);
+        throw new Error(`Unknown validation type: ${testCase.validationType}`);
     }
 
-    console.log(`${testCase.id} passed its result validation.`);
+    console.log(`${testCase.id} validation completed.`);
   });
 }

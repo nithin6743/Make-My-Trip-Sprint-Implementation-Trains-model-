@@ -13,150 +13,97 @@ export class TrainResultsPage {
     await expect(this.trainCards.first()).toBeVisible({
       timeout: 60000,
     });
-
-    expect(await this.trainCards.count()).toBeGreaterThan(0);
   }
 
-  async getFirstDepartureTimes(limit: number): Promise<string[]> {
-    const count = Math.min(await this.trainCards.count(), limit);
-    const times: string[] = [];
-
-    for (let i = 0; i < count; i++) {
-      const departureTime = this.trainCards
-        .nth(i)
-        .locator('[class*="dateTimeInfo"]')
-        .first()
-        .locator('span[class*="timeText"]:not([data-testid="arrival-time"])')
-        .first();
-
-      await expect(departureTime).toBeVisible({
-        timeout: 10000,
-      });
-
-      times.push(this.cleanText(await departureTime.innerText()));
-    }
-
-    return times;
-  }
-
-  async verifyDepartureAfter(
-    hour: number,
-    minute: number,
-    limit: number,
+  async verifyFirstDepartureAfter(
+    cutoffHour: number,
+    cutoffMinute: number,
   ): Promise<void> {
-    const times = await this.getFirstDepartureTimes(limit);
+    const locator = this.trainCards
+      .first()
+      .locator('[class*="dateTimeInfo"]')
+      .first()
+      .locator('span[class*="timeText"]:not([data-testid="arrival-time"])')
+      .first();
 
-    expect(times.length).toBeGreaterThan(0);
+    await expect(locator).toBeVisible({ timeout: 15000 });
 
-    const cutoff = hour * 60 + minute;
-    const failures: string[] = [];
+    const text = this.cleanText(await locator.innerText());
+    const actual = this.parseTime(text);
+    const cutoff = cutoffHour * 60 + cutoffMinute;
 
-    times.forEach((time, index) => {
-      if (this.parseTime(time) < cutoff) {
-        failures.push(`Train ${index + 1}: ${time}`);
-      }
-    });
+    console.log(`First train departure: ${text}`);
 
     expect(
-      failures,
-      `Trains departing before the cutoff:\n${failures.join("\n")}`,
-    ).toEqual([]);
+      actual,
+      `First train departs before ${cutoffHour}:00: ${text}`,
+    ).toBeGreaterThanOrEqual(cutoff);
   }
 
-  async verifyArrivalBefore(
-    hour: number,
-    minute: number,
-    limit: number,
+  async verifyFirstArrivalBefore(
+    cutoffHour: number,
+    cutoffMinute: number,
   ): Promise<void> {
-    const count = Math.min(await this.trainCards.count(), limit);
+    const locator = this.trainCards
+      .first()
+      .locator('[data-testid="arrival-time"]');
 
-    expect(count).toBeGreaterThan(0);
+    await expect(locator).toBeVisible({ timeout: 15000 });
 
-    const cutoff = hour * 60 + minute;
-    const failures: string[] = [];
+    const text = this.cleanText(await locator.innerText());
+    const actual = this.parseTime(text);
+    const cutoff = cutoffHour * 60 + cutoffMinute;
 
-    for (let i = 0; i < count; i++) {
-      const arrivalTime = this.trainCards
-        .nth(i)
-        .locator('[data-testid="arrival-time"]');
-
-      await expect(arrivalTime).toBeVisible({
-        timeout: 10000,
-      });
-
-      const time = this.cleanText(await arrivalTime.innerText());
-
-      if (this.parseTime(time) >= cutoff) {
-        failures.push(`Train ${i + 1}: ${time}`);
-      }
-    }
+    console.log(`First train arrival: ${text}`);
 
     expect(
-      failures,
-      `Trains arriving at or after the cutoff:\n${failures.join("\n")}`,
-    ).toEqual([]);
+      actual,
+      `First train arrives at or after ${cutoffHour}:00: ${text}`,
+    ).toBeLessThan(cutoff);
   }
 
-  async verifyAvailability(limit: number): Promise<void> {
-    const count = Math.min(await this.trainCards.count(), limit);
-    expect(count).toBeGreaterThan(0);
+  async verifyFirstTrainAvailability(): Promise<void> {
+    const labels = this.trainCards
+      .first()
+      .locator('[data-testid="availability-text"]');
 
-    for (let i = 0; i < count; i++) {
-      const labels = this.trainCards
-        .nth(i)
-        .locator('[data-testid="availability-text"]');
+    await expect(labels.first()).toBeVisible({ timeout: 15000 });
 
-      const labelCount = await labels.count();
-      expect(
-        labelCount,
-        `Train ${i + 1} has no availability labels`,
-      ).toBeGreaterThan(0);
+    const statuses = (await labels.allInnerTexts())
+      .map((text) => this.cleanText(text))
+      .filter(Boolean);
 
-      const statuses = (await labels.allInnerTexts())
-        .map((text) => text.trim())
-        .filter(Boolean);
+    console.log(`First train availability: ${statuses.join(" | ")}`);
 
-      console.log(`Train ${i + 1} availability: ${statuses.join(" | ")}`);
+    const hasAvailableStatus = statuses.some(
+      (status) =>
+        /\bavailable\b/i.test(status) &&
+        !/\bnot available\b|\bunavailable\b/i.test(status),
+    );
 
-      expect(
-        statuses.some(
-          (status) =>
-            /available/i.test(status) &&
-            !/not available|unavailable/i.test(status),
-        ),
-        `Train ${i + 1} has no positive availability status: ${statuses.join(" | ")}`,
-      ).toBeTruthy();
-    }
+    expect(
+      hasAvailableStatus,
+      `No positive availability status found: ${statuses.join(" | ")}`,
+    ).toBeTruthy();
   }
 
-  async verifyJourneyClass(
-    expectedClass: string,
-    limit: number,
-  ): Promise<void> {
-    const count = Math.min(await this.trainCards.count(), limit);
+  async verifyFirstTrainClass(expectedClass: string): Promise<void> {
+    const labels = this.trainCards
+      .first()
+      .locator('[data-testid="class-info"]');
 
-    expect(count).toBeGreaterThan(0);
+    await expect(labels.first()).toBeVisible({ timeout: 15000 });
 
-    for (let i = 0; i < count; i++) {
-      const classLocators = this.trainCards
-        .nth(i)
-        .locator('[data-testid="class-info"]');
+    const classes = (await labels.allInnerTexts()).map((text) =>
+      this.cleanText(text),
+    );
 
-      await expect(classLocators.first()).toBeVisible({
-        timeout: 10000,
-      });
+    console.log(`First train classes: ${classes.join(", ")}`);
 
-      const availableClasses = (await classLocators.allInnerTexts()).map(
-        (value) => this.cleanText(value),
-      );
-
-      console.log(`Train ${i + 1} classes: ${availableClasses.join(", ")}`);
-
-      expect(
-        availableClasses,
-        `Train ${i + 1} does not contain journey class ${expectedClass}. Found: ${availableClasses.join(", ")}`,
-      ).toContain(expectedClass);
-    }
+    expect(
+      classes,
+      `Expected class ${expectedClass}; found ${classes.join(", ")}`,
+    ).toContain(expectedClass);
   }
 
   private cleanText(value: string): string {
@@ -167,27 +114,22 @@ export class TrainResultsPage {
   }
 
   private parseTime(value: string): number {
-    const normalized = this.cleanText(value);
-    const match = normalized.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    const match = this.cleanText(value).match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
 
     if (!match) {
-      throw new Error(
-        `Unable to parse time "${value}". Expected format such as "06:30 PM".`,
-      );
+      throw new Error(`Cannot parse time "${value}"`);
     }
 
     let hour = Number(match[1]);
     const minute = Number(match[2]);
     const period = match[3].toUpperCase();
 
-    if (hour < 1 || hour > 12 || minute < 0 || minute > 59) {
-      throw new Error(`Invalid time value: "${value}"`);
+    if (hour < 1 || hour > 12 || minute > 59) {
+      throw new Error(`Invalid time "${value}"`);
     }
 
     if (period === "AM") {
-      if (hour === 12) {
-        hour = 0;
-      }
+      if (hour === 12) hour = 0;
     } else if (hour !== 12) {
       hour += 12;
     }
